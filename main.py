@@ -151,8 +151,6 @@ class GridTrader:
             print(grids_below)  # DEBUG
             order_args = ('sell', len(self.grids_below) - len(grids_below))
             mp.Process(target = self.place_order, args = order_args).start()
-        else:
-            print('waiting')
 
         # Store grids below for next iteration
         self.grids_below = grids_below
