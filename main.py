@@ -58,7 +58,7 @@ class GridTrader:
             self.position_size = account_allocation / self.grids_amount
             self.quantity = None
         elif quantity is not None and account_allocation is None:
-            self.quantity = quantity
+            self.quantity = quantity / self.grids_amount
             self.account_allocation = None
             self.position_size = None
         else:
