@@ -33,7 +33,8 @@ class GridTrader:
         symbol: str, 
         trading_range: tuple,
         grids_amount: int, 
-        account_allocation: float, 
+        account_allocation: float = None,
+        quantity: int = None, 
         top_profit_stop: float = None,
         bottom_profit_stop: float = None,
         asset_class: str = 'stock'
@@ -52,9 +53,17 @@ class GridTrader:
         self.range_bottom = trading_range[0]
         self.range_top = trading_range[1]
         self.grids_amount = grids_amount
-        # Account allocation
-        self.account_allocation = account_allocation
-        self.position_size = account_allocation / self.grids_amount
+        # Account allocation - check for mutual exclusivity
+        if account_allocation is not None and quantity is None:
+            self.account_allocation = account_allocation
+            self.position_size = account_allocation / self.grids_amount
+            self.quantity = None
+        elif quantity is not None and account_allocation is None:
+            self.quantity = quantity
+            self.account_allocation = None
+            self.position_size = None
+        else:
+            raise Exception("quantity and account allocation are mutually exclusive.")
 
         # Calculate grids and store them in a list
         self.grids = []
@@ -62,6 +71,11 @@ class GridTrader:
         for i in range(self.grids_amount):
             grid = self.range_bottom + (i * distance)
             self.grids.append(round(grid, 2))
+        # Check that no two grids are the same
+        if len(self.grids) != len(set(self.grids)):
+            raise Exception(
+                "Check parameters. Two or more grids are in the same location."
+            )
 
         # Grid safety - top
         if top_profit_stop is None:
@@ -89,36 +103,73 @@ class GridTrader:
         Places an order to buy or sell. `direction` must be given as 'buy' or 'sell'.
         """
         direction = direction.lower()
-        if direction == 'buy':
-            alpaca.submit_order(
-                symbol = self.symbol,
-                notional = size * float(alpaca.get_account().equity) * self.position_size,
-                side = 'buy',
-                take_profit = {
-                    "limit_price": self.top_profit_stop
-                },
-                stop_loss = {
-                    "stop_price": self.bottom_profit_stop,
-                    "limit_price": self.bottom_profit_stop * 0.995  # 0.5% lower
-                }
+        if self.account_allocation:  # if notional values
+            if direction == 'buy':
+                alpaca.submit_order(
+                    symbol = self.symbol,
+                    notional = size * float(alpaca.get_account().equity) * self.position_size,
+                    side = 'buy',
+                    take_profit = {
+                        "limit_price": self.top_profit_stop
+                    },
+                    stop_loss = {
+                        "stop_price": self.bottom_profit_stop,
+                        "limit_price": self.bottom_profit_stop * 0.995  # 0.5% lower
+                    }
+                )
+            elif direction == 'sell':
+                alpaca.submit_order(
+                    symbol = self.symbol,
+                    notional = size * float(alpaca.get_account().equity) * self.position_size,
+                    side = 'sell',
+                    take_profit = {
+                        "limit_price": self.bottom_profit_stop
+                    },
+                    stop_loss = {
+                        "stop_price": self.top_profit_stop,
+                        "limit_price": self.top_profit_stop * 1.005  # 0.5% higher
+                    }
+                )
+            else:
+                raise Exception(f"Invalid direction: {direction}.")
+            
+            # Notional value print message.
+            print(f"{self.symbol} Order placed. {direction = }, {size = }.")
+        elif self.quantity:  # integer contracts
+            if direction == 'buy':
+                alpaca.submit_order(
+                    symbol = self.symbol,
+                    qty = self.quantity,
+                    side = 'buy',
+                    take_profit = {
+                        "limit_price": self.top_profit_stop
+                    },
+                    stop_loss = {
+                        "stop_price": self.bottom_profit_stop,
+                        "limit_price": self.bottom_profit_stop * 0.995  # 0.5% lower
+                    }
+                )
+            elif direction == 'sell':
+                alpaca.submit_order(
+                    symbol = self.symbol,
+                    qty = self.quantity,
+                    side = 'sell',
+                    take_profit = {
+                        "limit_price": self.bottom_profit_stop
+                    },
+                    stop_loss = {
+                        "stop_price": self.top_profit_stop,
+                        "limit_price": self.top_profit_stop * 1.005  # 0.5% higher
+                    }
+                )
+            else:
+                raise Exception(f"Invalid direction: {direction}.")
+            
+            # Quantity print message.
+            print(
+                f"{self.symbol} Order placed. {direction = },", 
+                f"quantity = {self.quantity}."
             )
-        elif direction == 'sell':
-            alpaca.submit_order(
-                symbol = self.symbol,
-                notional = size * float(alpaca.get_account().equity) * self.position_size,
-                side = 'sell',
-                take_profit = {
-                    "limit_price": self.bottom_profit_stop
-                },
-                stop_loss = {
-                    "stop_price": self.top_profit_stop,
-                    "limit_price": self.top_profit_stop * 1.005  # 0.5% higher
-                }
-            )
-        else:
-            raise Exception(f"Invalid direction: {direction}.")
-
-        print(f"{self.symbol} Order placed. {direction = }, {size = }.")
 
     def trade_logic(self):
         """
@@ -132,7 +183,6 @@ class GridTrader:
         current_price = self.current_price()
         # End logic/return nothing if price isn't in the grids
         if current_price < self.range_bottom or current_price > self.range_top:
-            print('Not in range.')
             return None
         
         # Calculate grids below 
@@ -143,13 +193,14 @@ class GridTrader:
             self.grids_below = grids_below
 
         # Make a purchase decision
-        if len(grids_below) > len(self.grids_below):
+        len_grids_below, len_self_grids_below = len(grids_below), len(self.grids_below)
+        if len_grids_below > len_self_grids_below:
             print(grids_below)  # DEBUG
-            order_args = ('buy', len(grids_below) - len(self.grids_below))
+            order_args = ('buy', len_grids_below - len_self_grids_below)
             mp.Process(target = self.place_order, args = order_args).start()
-        elif len(grids_below) < len(self.grids_below):
+        elif len_grids_below < len_self_grids_below:
             print(grids_below)  # DEBUG
-            order_args = ('sell', len(self.grids_below) - len(grids_below))
+            order_args = ('sell', len_self_grids_below - len_grids_below)
             mp.Process(target = self.place_order, args = order_args).start()
 
         # Store grids below for next iteration
@@ -157,14 +208,60 @@ class GridTrader:
 
     def deploy(self):
         """
-        Deploys the Grid Trader.
-        Iterates trade_logic during market hours once per second due to rate limit.
+        Deploys the Grid Trader. Iterates trade_logic.
         """
         while True:
-            # if market is open:
             self.trade_logic()
-            # time.sleep(0.61)
+            # time.sleep(0.61)  # API rate limits
 
+
+def create_default_bot(
+    symbol: str, 
+    grid_height: float,
+    grids_amount: int = 21,
+    quantity: int = None, 
+    allocation: float = None
+):
+    """
+    Returns a GridTrader object with a grid formed symmetrically
+    around the current price.
+    """
+    # Default arguments
+    if quantity is None and allocation is None:
+        raise Exception("You must provide either a quantity or allocation.")
+    elif quantity is not None and allocation is not None:
+        raise Exception("quantity and alloation are mutually exclusive.")
+
+    symbol = symbol.upper()
+
+    # Asset class (shortcut)
+    if len(symbol) == 6:  # BTCUSD, ETHUSD etc.
+        asset_class = 'crypto'
+    else:
+        asset_class = 'stock'
+
+    # Define parameters
+    current_price = float(alpaca.get_latest_trade(symbol).p)
+    trading_range = ((current_price - grid_height), (current_price + grid_height))
+
+    if quantity:
+        bot = GridTrader(
+            symbol = symbol,
+            trading_range = trading_range,
+            grids_amount = 21,
+            quantity = quantity,
+            asset_class = asset_class
+        )
+    elif allocation:
+        bot = GridTrader(
+            symbol = symbol,
+            trading_range = trading_range,
+            grids_amount = grids_amount,
+            account_allocation = allocation,
+            asset_class = asset_class
+        )
+    
+    return bot
 
 def main():
     """Top level main execution function."""
