@@ -4,6 +4,7 @@ import alpaca_trade_api
 # Local imports
 import multiprocessing as mp
 import time
+import sys
 
 # Project modules
 import _keys
@@ -77,12 +78,12 @@ class GridTrader:
         if direction != 'buy' and direction != 'sell':
             raise Exception("Invalid argument for direction. Must be 'buy' or 'sell'.")
 
-        # alpaca.submit_order(
-        #     symbol = self.symbol,
-        #     notional = size * float(alpaca.get_acccount().equity) * self.position_size,
-        #     side = direction
-        # )
-        print(f"{direction = }, {size = }")
+        alpaca.submit_order(
+            symbol = self.symbol,
+            notional = size * float(alpaca.get_acccount().equity) * self.position_size,
+            side = direction
+        )
+        print(f"Order placed. {direction = }, {size = }.")
 
     def trade_logic(self):
         """
@@ -101,7 +102,6 @@ class GridTrader:
         
         # Calculate grids below 
         grids_below = [grid for grid in self.grids if grid < current_price]
-        print(grids_below)
 
         # First iteration check
         if self.grids_below is None:
@@ -109,9 +109,11 @@ class GridTrader:
 
         # Make a purchase decision
         if len(grids_below) > len(self.grids_below):
+            print(grids_below)  # DEBUG
             order_args = ('buy', len(grids_below) - len(self.grids_below))
             mp.Process(target = self.place_order, args = order_args).start()
         elif len(grids_below) < len(self.grids_below):
+            print(grids_below)  # DEBUG
             order_args = ('sell', len(self.grids_below) - len(grids_below))
             mp.Process(target = self.place_order, args = order_args).start()
         else:
@@ -131,5 +133,16 @@ class GridTrader:
             # time.sleep(0.61)
 
 
+def main():
+    """Top level main execution function."""
+    btc_trader = GridTrader(
+        symbol = 'BTCUSD',
+        trading_range = (sys.argv[1], sys.argv[2]),
+        grids_amount = 21,
+        account_allocation = 1,
+        asset_class = 'crypto'
+    )
+    mp.Process(target = btc_trader.deploy).start()
+
 if __name__ == "__main__":
-    GridTrader('BTCUSD', (42000, 42200), 21, 0.5, 'crypto').deploy()
+    main()
