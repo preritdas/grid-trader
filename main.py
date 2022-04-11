@@ -23,15 +23,20 @@ class GridTrader:
     Independent class which relies only on the Alpaca API instantiated globally.
     Requires a symbol, trading range, number of grids, and account allocation.
 
+    Grid safety is optional. `top_profit_stop` and `bottom_profit_stop` will default
+    to one grid length above the grid if arguments aren't given.
+
     It's recommended to deploy Grid Traders using multiprocessing. 
     """
 
     def __init__(
         self, 
         symbol: str, 
-        trading_range: tuple, 
+        trading_range: tuple,
         grids_amount: int, 
         account_allocation: float, 
+        top_profit_stop: float = None,
+        bottom_profit_stop: float = None,
         asset_class: str = 'stock'
     ):
         # Exception if trading_range items aren't numbers
@@ -59,6 +64,17 @@ class GridTrader:
             grid = self.range_bottom + (i * distance)
             self.grids.append(round(grid, 2))
 
+        # Grid safety - top
+        if top_profit_stop is None:
+            self.top_profit_stop = self.range_top + distance
+        else:
+            self.top_profit_stop = top_profit_stop
+        # Grid safety - bottom
+        if bottom_profit_stop is None:
+            self.bottom_profit_stop = self.range_bottom - distance
+        else:
+            self.bottom_profit_stop = bottom_profit_stop
+
         # Define self.grids_below to allow first trade_logic iteration 
         self.grids_below = None
     
@@ -73,16 +89,36 @@ class GridTrader:
         """
         Places an order to buy or sell. `direction` must be given as 'buy' or 'sell'.
         """
-        # Check for valid direction input
         direction = direction.lower()
-        if direction != 'buy' and direction != 'sell':
-            raise Exception("Invalid argument for direction. Must be 'buy' or 'sell'.")
+        if direction == 'buy':
+            alpaca.submit_order(
+                symbol = self.symbol,
+                notional = size * float(alpaca.get_account().equity) * self.position_size,
+                side = 'buy',
+                take_profit = {
+                    "limit_price": self.top_profit_stop
+                },
+                stop_loss = {
+                    "stop_price": self.bottom_profit_stop,
+                    "limit_price": self.bottom_profit_stop * 0.995  # 0.5% lower
+                }
+            )
+        elif direction == 'sell':
+            alpaca.submit_order(
+                symbol = self.symbol,
+                notional = size * float(alpaca.get_account().equity) * self.position_size,
+                side = 'sell',
+                take_profit = {
+                    "limit_price": self.bottom_profit_stop
+                },
+                stop_loss = {
+                    "stop_price": self.top_profit_stop,
+                    "limit_price": self.top_profit_stop * 1.005  # 0.5% higher
+                }
+            )
+        else:
+            raise Exception(f"Invalid direction: {direction}.")
 
-        alpaca.submit_order(
-            symbol = self.symbol,
-            notional = size * float(alpaca.get_account().equity) * self.position_size,
-            side = direction
-        )
         print(f"Order placed. {direction = }, {size = }.")
 
     def trade_logic(self):
@@ -137,7 +173,7 @@ def main():
     """Top level main execution function."""
     btc_trader = GridTrader(
         symbol = 'BTCUSD',
-        trading_range = (sys.argv[1], sys.argv[2]),
+        trading_range = (float(sys.argv[1]), float(sys.argv[2])),
         grids_amount = 21,
         account_allocation = 1,
         asset_class = 'crypto'
