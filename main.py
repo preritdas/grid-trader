@@ -80,7 +80,7 @@ class GridTrader:
 
         alpaca.submit_order(
             symbol = self.symbol,
-            notional = size * float(alpaca.get_acccount().equity) * self.position_size,
+            notional = size * float(alpaca.get_account().equity) * self.position_size,
             side = direction
         )
         print(f"Order placed. {direction = }, {size = }.")
