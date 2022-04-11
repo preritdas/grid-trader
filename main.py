@@ -4,7 +4,6 @@ import alpaca_trade_api
 # Local imports
 import multiprocessing as mp
 import time
-import sys
 
 # Project modules
 import _keys
@@ -49,7 +48,7 @@ class GridTrader:
         if self.asset_class != 'stock' and self.asset_class != 'crypto':
             raise Exception("Invalid asset class given.")
 
-        self.symbol = symbol
+        self.symbol = symbol.upper()
         self.range_bottom = trading_range[0]
         self.range_top = trading_range[1]
         self.grids_amount = grids_amount
@@ -119,7 +118,7 @@ class GridTrader:
         else:
             raise Exception(f"Invalid direction: {direction}.")
 
-        print(f"Order placed. {direction = }, {size = }.")
+        print(f"{self.symbol} Order placed. {direction = }, {size = }.")
 
     def trade_logic(self):
         """
@@ -171,14 +170,26 @@ class GridTrader:
 
 def main():
     """Top level main execution function."""
+    # Deploy Bitcoin
     btc_trader = GridTrader(
         symbol = 'BTCUSD',
-        trading_range = (float(sys.argv[1]), float(sys.argv[2])),
-        grids_amount = 21,
-        account_allocation = 1,
+        trading_range = (41800, 42400),
+        grids_amount = 31,
+        account_allocation = 0.5,
         asset_class = 'crypto'
     )
     mp.Process(target = btc_trader.deploy).start()
+
+    # Deploy Ethereum
+    eth_trader = GridTrader(
+        symbol = 'ETHUSD',
+        trading_range = (3150, 3212),
+        grids_amount = 31,
+        account_allocation = 0.5,
+        asset_class = 'crypto'
+    )
+    mp.Process(target = eth_trader.deploy).start()
+
 
 if __name__ == "__main__":
     main()
