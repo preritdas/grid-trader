@@ -43,12 +43,20 @@ class GridTrader:
         for i in range(self.grids_amount):
             grid = self.range_bottom + (i * distance)
             self.grids.append(round(grid, 2))
+
+        # # !!!!!!!!!!!!!! POSSIBLY UNNECESSARY Dictionary with grid states (untouched, bought, sold)
+        # self.grid_states = {}
+        # for grid in self.grids:
+        #     self.grid_states[grid] = None
+
+        # Define self.grids_below to allow first trade_logic iteration 
+        self.grids_below = []
     
     def current_price(self):
         """Returns the current price of self.symbol, calculated by the latest trade."""
         return float(alpaca.get_snapshot(symbol = self.symbol).latest_trade.p)
 
-    def place_order(self, direction: str):
+    def place_order(self, direction: str, size: int):
         """
         Places an order to buy or sell. `direction` must be given as 'buy' or 'sell'.
         """
@@ -61,7 +69,7 @@ class GridTrader:
         def submit_order():
             alpaca.submit_order(
                 symbol = self.symbol,
-                notional = float(alpaca.get_acccount().equity) * self.position_size,
+                notional = size * float(alpaca.get_acccount().equity) * self.position_size,
                 side = direction
             )
 
@@ -72,15 +80,27 @@ class GridTrader:
         """
         Internal function. This shouldn't be called.
         It's used by self.deploy(). This function is written to handle one iteration.
+        
+        Returns None if the current price is out of the grid's range.
+        Returns True if the logic resulted in a buy.
+        Returns False if the logic resulted in a short. 
         """
         current_price = self.current_price()
         # End logic/return nothing if price isn't in the grids
         if current_price < self.range_bottom or current_price > self.range_top:
             return None
         
-        # Calculate grids below and above
+        # Calculate grids below 
         grids_below = [grid for grid in self.grids if grid < current_price]
-        grids_above = [grid for grid in self.grids if grid > current_price]
+
+        # Make a purchase decision
+        if len(grids_below) > len(self.grids_below):
+            self.place_order('buy', len(grids_below) - len(self.grids_below))
+        elif len(grids_below) < len(self.grids_below):
+            self.place_order('sell', len(self.grids_below) - len(grids_below))
+
+        # Store grids below for next iteration
+        self.grids_below = grids_below
 
     def deploy(self):
         """Deploys the Grid Trader."""
@@ -88,5 +108,4 @@ class GridTrader:
         self.trade_logic()
 
 if __name__ == "__main__":
-    grid_trader_demo = GridTrader('AAPL', (150, 200), 11, 0.5)
-    grid_trader_demo.deploy()
+    GridTrader('AAPL', (150, 200), 11, 0.5).deploy()
