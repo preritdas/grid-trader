@@ -24,6 +24,7 @@ class GridTrader:
 
     It's recommended to deploy Grid Traders using multiprocessing. 
     """
+
     def __init__(
         self, 
         symbol: str, 
@@ -131,4 +132,4 @@ class GridTrader:
 
 
 if __name__ == "__main__":
-    GridTrader('BTCUSD', (42000, 42100), 11, 0.5, 'crypto').deploy()
+    GridTrader('BTCUSD', (42000, 42200), 21, 0.5, 'crypto').deploy()
