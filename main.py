@@ -230,15 +230,17 @@ def create_default_bot(
     none_given = quantity is None and allocation is None
     assert not none_given
     
-    # Asset class (shortcut)
+    # Asset class (shortcut) and get current price
     if len(symbol) == 6:  # BTCUSD, ETHUSD etc.
         asset_class = 'crypto'
+        current_price = float(alpaca.get_latest_crypto_trade(symbol, 'CBSE').p)
     else:
         asset_class = 'stock'
+        current_price = float(alpaca.get_latest_trade(symbol).p)
 
     # Define parameters
     symbol = symbol.upper()
-    current_price = float(alpaca.get_latest_trade(symbol).p)
+    # Current price
     trading_range = ((current_price - grid_height), (current_price + grid_height))
 
     # Create the bot
@@ -272,13 +274,12 @@ def main():
     )
     mp.Process(target = btc_trader.deploy).start()
 
-    # Deploy Ethereum
-    eth_trader = GridTrader(
+    # Deploy Ethereum with default
+    eth_trader = create_default_bot(
         symbol = 'ETHUSD',
-        trading_range = (3150, 3212),
-        grids_amount = 31,
-        account_allocation = 0.5,
-        asset_class = 'crypto'
+        grid_height = 75,
+        grids_amount = 15,
+        quantity = 7
     )
     mp.Process(target = eth_trader.deploy).start()
 
