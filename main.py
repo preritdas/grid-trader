@@ -225,13 +225,11 @@ def create_default_bot(
     around the current price.
     """
     # Default arguments
-    if quantity is None and allocation is None:
-        raise Exception("You must provide either a quantity or allocation.")
-    elif quantity is not None and allocation is not None:
-        raise Exception("quantity and alloation are mutually exclusive.")
-
-    symbol = symbol.upper()
-
+    both_given = quantity is not None and allocation is not None
+    assert not both_given
+    none_given = quantity is None and allocation is None
+    assert not none_given
+    
     # Asset class (shortcut)
     if len(symbol) == 6:  # BTCUSD, ETHUSD etc.
         asset_class = 'crypto'
@@ -239,6 +237,7 @@ def create_default_bot(
         asset_class = 'stock'
 
     # Define parameters
+    symbol = symbol.upper()
     current_price = float(alpaca.get_latest_trade(symbol).p)
     trading_range = ((current_price - grid_height), (current_price + grid_height))
 
