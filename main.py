@@ -209,6 +209,7 @@ class GridTrader:
         """
         Deploys the Grid Trader. Iterates trade_logic.
         """
+        print(f"{self.symbol} Grid Trader has been deployed.")
         while True:
             self.trade_logic()
 
