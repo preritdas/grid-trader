@@ -24,8 +24,14 @@ class GridTrader:
 
     It's recommended to deploy Grid Traders using multiprocessing. 
     """
-    def __init__(self, symbol: str, trading_range: tuple, grids_amount: int, 
-                account_allocation: float, asset_class: str = 'stock'):
+    def __init__(
+        self, 
+        symbol: str, 
+        trading_range: tuple, 
+        grids_amount: int, 
+        account_allocation: float, 
+        asset_class: str = 'stock'
+    ):
         # Exception if trading_range items aren't numbers
         for item in trading_range:
             if type(item) not in [int, float]:
