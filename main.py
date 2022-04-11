@@ -3,7 +3,6 @@ import alpaca_trade_api
 
 # Local imports
 import multiprocessing as mp
-import time
 
 # Project modules
 import _keys
@@ -94,9 +93,9 @@ class GridTrader:
     def current_price(self):
         """Returns the current price of self.symbol, calculated by the latest trade."""
         if self.asset_class == 'crypto':
-            return float(alpaca.get_latest_crypto_trade(symbol = self.symbol, exchange = 'CBSE').p)
+            return float(alpaca.get_latest_crypto_trade(self.symbol, 'CBSE').p)
         else:
-            return float(alpaca.get_snapshot(symbol = self.symbol).latest_trade.p)
+            return float(alpaca.get_latest_trade(self.symbol).p)
 
     def place_order(self, direction: str, size: int):
         """
@@ -212,7 +211,6 @@ class GridTrader:
         """
         while True:
             self.trade_logic()
-            # time.sleep(0.61)  # API rate limits
 
 
 def create_default_bot(
@@ -244,6 +242,7 @@ def create_default_bot(
     current_price = float(alpaca.get_latest_trade(symbol).p)
     trading_range = ((current_price - grid_height), (current_price + grid_height))
 
+    # Create the bot
     if quantity:
         bot = GridTrader(
             symbol = symbol,
@@ -260,7 +259,6 @@ def create_default_bot(
             account_allocation = allocation,
             asset_class = asset_class
         )
-    
     return bot
 
 def main():
