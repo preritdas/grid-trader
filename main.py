@@ -1,4 +1,5 @@
 # Non-local imports
+from venv import create
 import alpaca_trade_api
 
 # Local imports
@@ -266,12 +267,10 @@ def create_default_bot(
 def main():
     """Top level main execution function."""
     # Deploy Bitcoin
-    btc_trader = GridTrader(
+    btc_trader = create_default_bot(
         symbol = 'BTCUSD',
-        trading_range = (41800, 42400),
-        grids_amount = 31,
-        account_allocation = 0.5,
-        asset_class = 'crypto'
+        grid_height = 100,
+        quantity = 1
     )
     mp.Process(target = btc_trader.deploy).start()
 
