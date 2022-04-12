@@ -113,11 +113,12 @@ class GridTrader:
                     notional = size * float(alpaca.get_account().equity) * self.position_size,
                     side = 'buy',
                     take_profit = {
-                        "limit_price": self.top_profit_stop
+                        "limit_price": str(self.top_profit_stop)
                     },
                     stop_loss = {
-                        "stop_price": self.bottom_profit_stop,
-                        "limit_price": self.bottom_profit_stop * 0.995  # 0.5% lower
+                        "stop_price": str(self.bottom_profit_stop),
+                        # Limit price 0.5% lower
+                        "limit_price": str(round(self.bottom_profit_stop * 0.995, 2))
                     }
                 )
             elif direction == 'sell':
@@ -126,11 +127,12 @@ class GridTrader:
                     notional = size * float(alpaca.get_account().equity) * self.position_size,
                     side = 'sell',
                     take_profit = {
-                        "limit_price": self.bottom_profit_stop
+                        "limit_price": str(self.bottom_profit_stop)
                     },
                     stop_loss = {
-                        "stop_price": self.top_profit_stop,
-                        "limit_price": self.top_profit_stop * 1.005  # 0.5% higher
+                        "stop_price": str(self.top_profit_stop),
+                        # Limit price 0.5% higher
+                        "limit_price": str(round(self.top_profit_stop * 1.005, 2))
                     }
                 )
             else:
@@ -145,11 +147,12 @@ class GridTrader:
                     qty = self.quantity,
                     side = 'buy',
                     take_profit = {
-                        "limit_price": self.top_profit_stop
+                        "limit_price": str(self.top_profit_stop)
                     },
                     stop_loss = {
-                        "stop_price": self.bottom_profit_stop,
-                        "limit_price": self.bottom_profit_stop * 0.995  # 0.5% lower
+                        "stop_price": str(self.bottom_profit_stop),
+                        # Limit price 0.5% lower
+                        "limit_price": str(round(self.bottom_profit_stop * 0.995, 2))
                     }
                 )
             elif direction == 'sell':
@@ -158,11 +161,12 @@ class GridTrader:
                     qty = self.quantity,
                     side = 'sell',
                     take_profit = {
-                        "limit_price": self.bottom_profit_stop
+                        "limit_price": str(self.bottom_profit_stop)
                     },
                     stop_loss = {
-                        "stop_price": self.top_profit_stop,
-                        "limit_price": self.top_profit_stop * 1.005  # 0.5% higher
+                        "stop_price": str(self.top_profit_stop),
+                        # Limit price 0.5% higher
+                        "limit_price": str(float(self.top_profit_stop * 1.005, 2)) 
                     }
                 )
             else:
