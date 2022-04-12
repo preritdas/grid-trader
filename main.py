@@ -4,6 +4,7 @@ import alpaca_trade_api
 
 # Local imports
 import multiprocessing as mp
+import math
 
 # Project modules
 import _keys
@@ -20,7 +21,9 @@ alpaca = alpaca_trade_api.REST(
 class GridTrader:
     """
     Independent class which relies only on the Alpaca API instantiated globally.
-    Requires a symbol, trading range, number of grids, and account allocation.
+    Requires a symbol, trading range, number of grids, and account allocation/quantity.
+    If a quantity is given and it is not divisible by the number of grids, the per-grid
+    order size will be rounded up.
 
     Grid safety is optional. `top_profit_stop` and `bottom_profit_stop` will default
     to one grid length above the grid if arguments aren't given.
@@ -59,7 +62,7 @@ class GridTrader:
             self.position_size = account_allocation / self.grids_amount
             self.quantity = None
         elif quantity is not None and account_allocation is None:
-            self.quantity = quantity / self.grids_amount
+            self.quantity = math.ceil(quantity / self.grids_amount)
             self.account_allocation = None
             self.position_size = None
         else:
@@ -194,11 +197,11 @@ class GridTrader:
 
         # Make a purchase decision
         len_grids_below, len_self_grids_below = len(grids_below), len(self.grids_below)
-        if len_grids_below > len_self_grids_below:
+        if len_grids_below < len_self_grids_below:
             print(grids_below)  # DEBUG
             order_args = ('buy', len_grids_below - len_self_grids_below)
             mp.Process(target = self.place_order, args = order_args).start()
-        elif len_grids_below < len_self_grids_below:
+        elif len_grids_below > len_self_grids_below:
             print(grids_below)  # DEBUG
             order_args = ('sell', len_self_grids_below - len_grids_below)
             mp.Process(target = self.place_order, args = order_args).start()
@@ -250,7 +253,7 @@ def create_default_bot(
         bot = GridTrader(
             symbol = symbol,
             trading_range = trading_range,
-            grids_amount = 21,
+            grids_amount = grids_amount,
             quantity = quantity,
             asset_class = asset_class
         )
@@ -266,23 +269,14 @@ def create_default_bot(
 
 def main():
     """Top level main execution function."""
-    # Deploy Bitcoin
-    btc_trader = create_default_bot(
-        symbol = 'BTCUSD',
-        grid_height = 100,
-        quantity = 1
-    )
-    mp.Process(target = btc_trader.deploy).start()
-
-    # Deploy Ethereum with default
-    eth_trader = create_default_bot(
+    eth_trader = GridTrader(
         symbol = 'ETHUSD',
-        grid_height = 75,
-        grids_amount = 15,
-        quantity = 7
+        trading_range = (2950, 2975),
+        grids_amount = 26,
+        quantity = 26,
+        asset_class = 'crypto'
     )
-    mp.Process(target = eth_trader.deploy).start()
-
+    mp.Process(target=eth_trader.deploy).start()
 
 if __name__ == "__main__":
     main()
