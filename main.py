@@ -166,7 +166,7 @@ class GridTrader:
                     stop_loss = {
                         "stop_price": str(self.top_profit_stop),
                         # Limit price 0.5% higher
-                        "limit_price": str(float(self.top_profit_stop * 1.005, 2)) 
+                        "limit_price": str(round(self.top_profit_stop * 1.005, 2)) 
                     }
                 )
             else:
