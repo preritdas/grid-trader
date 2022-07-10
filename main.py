@@ -1,5 +1,4 @@
 # Non-local imports
-from venv import create
 import alpaca_trade_api
 
 # Local imports
@@ -12,9 +11,9 @@ import _keys
 
 # Instantiate Alpaca API
 alpaca = alpaca_trade_api.REST(
-    key_id = _keys.alpaca_api_key,
-    secret_key = _keys.alpaca_api_secret,
-    base_url = _keys.alpaca_base_url
+    key_id = _keys.Alpaca.api_key,
+    secret_key = _keys.Alpaca.api_secret,
+    base_url = _keys.Alpaca.base_url
 )
 
 
@@ -30,7 +29,6 @@ class GridTrader:
 
     It's recommended to deploy Grid Traders using multiprocessing. 
     """
-
     def __init__(
         self, 
         symbol: str, 
@@ -94,12 +92,14 @@ class GridTrader:
         # Define self.grids_below to allow first trade_logic iteration 
         self.grids_below = None
     
+
     def current_price(self):
         """Returns the current price of self.symbol, calculated by the latest trade."""
         if self.asset_class == 'crypto':
             return float(alpaca.get_latest_crypto_trade(self.symbol, 'CBSE').p)
         else:
             return float(alpaca.get_latest_trade(self.symbol).p)
+
 
     def place_order(self, direction: str, size: int):
         """
@@ -178,6 +178,7 @@ class GridTrader:
                 f"quantity = {self.quantity}."
             )
 
+
     def trade_logic(self):
         """
         Internal function. This shouldn't be called.
@@ -212,6 +213,7 @@ class GridTrader:
 
         # Store grids below for next iteration
         self.grids_below = grids_below
+
 
     def deploy(self):
         """
@@ -271,6 +273,7 @@ def create_default_bot(
         )
     return bot
 
+
 def main():
     """Top level main execution function."""
     eth_trader = GridTrader(
@@ -281,6 +284,7 @@ def main():
         asset_class = 'crypto'
     )
     mp.Process(target=eth_trader.deploy).start()
+
 
 if __name__ == "__main__":
     main()
