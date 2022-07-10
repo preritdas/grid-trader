@@ -1,6 +1,6 @@
 # Grid Trader
 
-A semi-automatic stock and crypto grid trader. 
+A fully autonomous stock and crypto grid trader. Supports multi-asset deployment, allowing you to run Grid Traders on different assets using separate CPU cores. 
 
 Sample deployment for one asset:
 
@@ -23,7 +23,7 @@ def main():
 
 ## Features
 
-All features listed below are fully functional.
+All features listed below are fully functional and have been tested in deployment in early 2022.
 
 ### Simultaneous Deployment
 
