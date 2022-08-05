@@ -136,9 +136,9 @@ Contains Alpaca login credentials. The following items must be provided:
 
 ```ini
 [Alpaca]
-api_key = 'KEY'
-api_secret = 'SECRET'
-base_url = 'BASE_URL_ENDPOINT'
+api_key = KEY
+api_secret = SECRET
+base_url = BASE_URL_ENDPOINT
 ```
 
 A sample [keys.ini](keys%20(sample).ini) file is provided in the repository. After cloning, you can either rename this file to "keys.ini" or use the provided script (on Mac/Linux).
