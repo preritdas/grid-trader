@@ -215,7 +215,8 @@ class GridTrader:
         Returns False if the logic resulted in a short. 
         """
         current_price = self.current_price()
-        # End logic/return nothing if price isn't in the grids
+
+        # Do nothing if price isn't in the grids
         if current_price < self.range_bottom or current_price > self.range_top:
             return None
         
@@ -223,18 +224,17 @@ class GridTrader:
         grids_below = [grid for grid in self.grids if grid < current_price]
 
         # First iteration check
-        if self.grids_below is None:
-            self.grids_below = grids_below
+        if self.grids_below is None: self.grids_below = grids_below
 
         # Make a purchase decision
-        len_grids_below, len_self_grids_below = len(grids_below), len(self.grids_below)
-        if len_grids_below < len_self_grids_below:
+        len_grids_below, len_last_grids_below = len(grids_below), len(self.grids_below)
+        if len_grids_below < len_last_grids_below:
             utils.console.print(grids_below)  # DEBUG
-            order_args = ('buy', len_grids_below - len_self_grids_below)
+            order_args = ('buy', len_last_grids_below - len_grids_below)
             mp.Process(target = self.place_order, args = order_args).start()
-        elif len_grids_below > len_self_grids_below:
+        elif len_grids_below > len_last_grids_below:
             utils.console.print(grids_below)  # DEBUG
-            order_args = ('sell', len_self_grids_below - len_grids_below)
+            order_args = ('sell', len_grids_below - len_last_grids_below)
             mp.Process(target = self.place_order, args = order_args).start()
 
         # Store grids below for next iteration
@@ -279,11 +279,11 @@ def create_default_bot(
         )
 
     # Default arguments
-    assert not quantity is not None and allocation is not None
-    assert not quantity is None and allocation is None
+    assert not (quantity is not None and allocation is not None)
+    assert not (quantity is None and allocation is None)
     
     # Asset class (shortcut) and get current price
-    if len(symbol) == 7:  # BTCUSD, ETHUSD etc.
+    if len(symbol) == 6:  # BTCUSD, ETHUSD etc.
         asset_class = 'crypto'
         current_price = float(alpaca.get_latest_crypto_trade(symbol, 'CBSE').p)
     else:
