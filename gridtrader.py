@@ -42,9 +42,11 @@ class GridTrader:
         asset_class: str = 'stock'
     ):
         # Exception if trading_range items aren't numbers
-        for item in trading_range:
-            if type(item) not in [int, float]:
-                raise Exception("Items in the trading_range tuple must be numbers.")
+        if any(
+            item for item in trading_range if not \
+                isinstance(item, int) and not isinstance(item, float)
+        ):
+            raise Exception("Items in the trading_range tuple must be numbers.")
 
         # Exception if invalid asset class is given
         self.asset_class = asset_class.lower()
@@ -237,8 +239,7 @@ class GridTrader:
         Deploys the Grid Trader. Iterates trade_logic.
         """
         print(f"{self.symbol} Grid Trader has been deployed.")
-        while True:
-            self.trade_logic()
+        while True: self.trade_logic()
 
 
 # ---- Deployment ----
@@ -273,7 +274,7 @@ def create_default_bot(
     assert not quantity is None and allocation is None
     
     # Asset class (shortcut) and get current price
-    if len(symbol) == 6:  # BTCUSD, ETHUSD etc.
+    if len(symbol) == 7:  # BTCUSD, ETHUSD etc.
         asset_class = 'crypto'
         current_price = float(alpaca.get_latest_crypto_trade(symbol, 'CBSE').p)
     else:
@@ -282,6 +283,7 @@ def create_default_bot(
 
     # Define parameters
     symbol = symbol.upper()
+
     # Current price
     trading_range = ((current_price - grid_height), (current_price + grid_height))
 
@@ -302,4 +304,5 @@ def create_default_bot(
             account_allocation = allocation,
             asset_class = asset_class
         )
+
     return bot
