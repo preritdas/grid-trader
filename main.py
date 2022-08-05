@@ -17,13 +17,20 @@ def main():
 
     btc_trader = gridtrader.GridTrader(
         symbol = 'BTCUSD',
-        trading_range = (15200, 15300),
+        trading_range = (22930, 23000),
         grids_amount = 51,
-        quantity = 51,
+        account_allocation = 0.1,
         asset_class = 'crypto'
     )
 
-    # Start the GridTraders simultaneously
+    easy_deploy = gridtrader.create_default_bot(
+        symbol = 'BTCUSD',
+        grid_height = 15,
+        grids_amount = 16,
+        allocation = 0.5
+    )
+
+    # Start the manual GridTraders simultaneously
     mp.Process(target=eth_trader.deploy).start()
     mp.Process(target=btc_trader.deploy).start()
 
