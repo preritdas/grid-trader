@@ -11,6 +11,7 @@ import multiprocessing as mp
 
 # Project modules
 import keys
+import utils
 
 
 class GridTrader:
@@ -158,7 +159,7 @@ class GridTrader:
                 raise Exception(f"Invalid direction: {direction}.")
             
             # Notional value print message.
-            print(f"{self.symbol} Order placed. {direction = }, {size = }.")
+            utils.console.log(f"{self.symbol} Order placed. {direction = }, {size = }.")
         elif self.quantity:  # integer contracts
             if direction == 'buy':
                 self.alpaca.submit_order(
@@ -192,7 +193,7 @@ class GridTrader:
                 raise Exception(f"Invalid direction: {direction}.")
             
             # Quantity print message.
-            print(
+            utils.console.log(
                 f"{self.symbol} Order placed. {direction = },", 
                 f"quantity = {self.quantity}."
             )
@@ -222,11 +223,11 @@ class GridTrader:
         # Make a purchase decision
         len_grids_below, len_self_grids_below = len(grids_below), len(self.grids_below)
         if len_grids_below < len_self_grids_below:
-            print(grids_below)  # DEBUG
+            utils.console.print(grids_below)  # DEBUG
             order_args = ('buy', len_grids_below - len_self_grids_below)
             mp.Process(target = self.place_order, args = order_args).start()
         elif len_grids_below > len_self_grids_below:
-            print(grids_below)  # DEBUG
+            utils.console.print(grids_below)  # DEBUG
             order_args = ('sell', len_self_grids_below - len_grids_below)
             mp.Process(target = self.place_order, args = order_args).start()
 
@@ -238,7 +239,7 @@ class GridTrader:
         """
         Deploys the Grid Trader. Iterates trade_logic.
         """
-        print(f"{self.symbol} Grid Trader has been deployed.")
+        utils.console.log(f"{self.symbol} Grid Trader has been deployed.")
         while True: self.trade_logic()
 
 
