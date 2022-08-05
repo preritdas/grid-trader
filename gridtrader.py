@@ -8,6 +8,7 @@ import alpaca_trade_api as alpaca_api
 # Local imports
 import math
 import multiprocessing as mp
+import time  # sleep between trade logic
 
 # Project modules
 import keys
@@ -240,7 +241,9 @@ class GridTrader:
         Deploys the Grid Trader. Iterates trade_logic.
         """
         utils.console.log(f"{self.symbol} Grid Trader has been deployed.")
-        while True: self.trade_logic()
+        while True: 
+            self.trade_logic()
+            time.sleep(0.5)
 
 
 # ---- Deployment ----
