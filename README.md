@@ -141,6 +141,12 @@ api_secret = 'SECRET'
 base_url = 'BASE_URL_ENDPOINT'
 ```
 
+A sample [keys.ini](keys%20(sample).ini) file is provided in the repository. After cloning, you can either rename this file to "keys.ini" or use the provided script (on Mac/Linux).
+
+```bash
+bash scripts/configurate.sh
+```
+
 ### requirements.txt
 
 All the package requirements for running Grid Trader. Note that Grid Trader was developed using Python 3.10.6. Currently, the only dependency is Alpaca's trading API, as all mathematical operations are calculated locally. To install all dependencies:
