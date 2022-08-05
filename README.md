@@ -1,23 +1,32 @@
 # Grid Trader
 
-A fully autonomous stock and crypto grid trader. Supports multi-asset deployment, allowing you to run Grid Traders on different assets using separate CPU cores. 
+A fully autonomous stock and crypto grid trader. Supports multi-asset and multi-account deployment, allowing you to simultaneously deploy Grid Traders using separate CPU cores. GridTrader is lightweight, whose only dependency is Alpaca's trade execution API, as all other operations are computed locally. 
 
-Sample deployment for one asset:
+Below is an example deployment of two grid traders, for Bitcoin and Ethereum.
 
 ```python
+import gridtrader
+
 def main():
-    """Deploys a Bitcoin grid trader."""
-    btc_trader = GridTrader(
-        symbol = 'BTCUSD',
-        trading_range = (41800, 42400),
-        grids_amount = 31,
-        account_allocation = 0.5,
+    """Top level main execution function."""
+    eth_trader = gridtrader.GridTrader(
+        symbol = 'ETH/USD',
+        trading_range = (2950, 2975),
+        grids_amount = 26,
+        quantity = 26,
         asset_class = 'crypto'
     )
 
-    # Deploy one bot locally
-    btc_trader.deploy()
-    # Use multiprocessing to allow multiple simultaneous bots
+    btc_trader = gridtrader.GridTrader(
+        symbol = 'BTC/USD',
+        trading_range = (15200, 15300),
+        grids_amount = 51,
+        quantity = 51,
+        asset_class = 'crypto'
+    )
+
+    # Start the GridTraders simultaneously
+    mp.Process(target=eth_trader.deploy).start()
     mp.Process(target=btc_trader.deploy).start()
 ```
 
@@ -29,7 +38,9 @@ All features listed below are fully functional and have been tested in deploymen
 
 Multiple grid traders (for the same or different assets) can be deployed simultaneously, using different cores (multiprocessing). This allows each individual bot to run with a full performance capacity. 
 
-It's recommended to leave two cores free per grid trader, because a grid trader sends off order execution tasks to another core to allow it continue actively trading unhindered. 
+Further
+
+It's recommended to leave one core free per grid trader, as grid traders distribute order execution tasks to further separate core, thereby allowing it continue actively monitoring the underlying, unhindered. 
 
 Below is an example of creating and running two bots simultaneous in individual cores.
 
@@ -76,6 +87,7 @@ Below are all the parameters for Grid Trader along with their necessities and be
 | `asset_class` | Optional | String - either `'stock'` or `'crypto'`. Defaults to `'stock'`. Necessary for the bot's data collection function. |
 | `trading_range` | Required | Tuple - two items. The first is the range bottom, the second is the range top. |
 | `grids_amount` | Required | Integer - the number of grids for the bot to split the range equally into. Inclusive. So, to split a $100 range into 10 equal zones, pass `grids_amount = 11`. |
+| `alpaca` | Optional | Alpaca API REST - Instantiate and pass in your own Alpaca object if you want to specify the account in which the GridTrader operates in. If you don't pass anything in, the GridTrader will operate in the account specified by your `keys.ini` file. |
 | `account_allocation` | Mutually exclusive with `quantity` | Float - the proportion of the account that should be allocated to the entire strategy. If every single grid is triggered, this is the maximum amount a portfolio will be used. |
 | `quantity` | Mutually exclusive with `account_allocation` | Int - the number of shares to be allocated to the strategy. Note that this will _still_ result in orders being divided by grid. |
 | `top_profit_stop` | Optional | Float - the _maximum_ take-profit for sells and stop-loss for buys. If Grid Trader breaks the range _high_, this is the stop-out/profit exit point. Defaults to one grid _higher_ than the grid range. |
@@ -95,6 +107,7 @@ Arguments for `create_default_bot()`:
 | `grid_height` | Required | Float - half the total width of the range. This function outputs a bot whose range is perfectly centered around the symbol's current price. |
 | `grids_amount` | Optional | Int - the number of grids to be divided in the range. Defaults to 21. |
 | `account_allocation` | Mutually exclusive with `quantity` | Float - the proportion of the account that should be allocated to the entire strategy. If every single grid is triggered, this is the maximum amount a portfolio will be used. |
+| `alpaca` | Optional | Alpaca API REST - Instantiate and pass in your own Alpaca object if you want to specify the account in which the GridTrader operates in. If you don't pass anything in, the GridTrader will operate in the account specified by your `keys.ini` file. |
 | `quantity` | Mutually exclusive with `account_allocation` | Int - the number of shares to be allocated to the strategy. Note that this will _still_ result in orders being divided by grid. |
 
 Creating and deploying a bot using the `create_default_bot()` function:
@@ -115,23 +128,23 @@ def main():
 
 ### main.py
 
-Defines `GridTrader`, `create_default_bot()`, and has a `main()` execution function at the bottom. Is used to run the whole program and execute multiprocessing. 
+User script. Create all desired GridTrader, and optionally, instantiate any Alpaca REST objects for accounts not specified in `keys.ini`. Then, use `mp.Process(target=btc_trader.deploy).start()` to start each grid trader. 
 
-### _keys.py
+### keys.ini
 
 Contains Alpaca login credentials. The following items must be provided:
 
-```python
-# Alpaca
-alpaca_api_key = 'KEY',
-alpaca_api_secret = 'SECRET',
-alpaca_base_url = 'BASE_URL_ENDPOINT'
+```ini
+[Alpaca]
+api_key = 'KEY'
+api_secret = 'SECRET'
+base_url = 'BASE_URL_ENDPOINT'
 ```
 
 ### requirements.txt
 
-All the package requirements for running Grid Trader. Note that Grid Trader was developed using Python 3.10.4. To install all dependencies:
+All the package requirements for running Grid Trader. Note that Grid Trader was developed using Python 3.10.6. Currently, the only dependency is Alpaca's trading API, as all mathematical operations are calculated locally. To install all dependencies:
 
-```
+```bash
 python3.10 -m pip install -r requirements.txt
 ```
