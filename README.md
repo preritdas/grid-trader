@@ -38,8 +38,6 @@ All features listed below are fully functional and have been tested in deploymen
 
 Multiple grid traders (for the same or different assets) can be deployed simultaneously, using different cores (multiprocessing). This allows each individual bot to run with a full performance capacity. 
 
-Further
-
 It's recommended to leave one core free per grid trader, as grid traders distribute order execution tasks to further separate core, thereby allowing it continue actively monitoring the underlying, unhindered. 
 
 Below is an example of creating and running two bots simultaneous in individual cores.
