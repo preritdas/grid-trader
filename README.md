@@ -2,6 +2,10 @@
 
 A fully autonomous stock and crypto grid trader. Supports multi-asset and multi-account deployment, allowing you to simultaneously deploy Grid Traders using separate CPU cores. GridTrader is lightweight, whose only dependency is Alpaca's trade execution API, as all other operations are computed locally. 
 
+See GridTrader in action! (Alpaca was having some data/execution errors during the recording, resulting in enforced sleep messages. Assuming all Alpaca systems are functional, only grid values and order submission logs are displayed.)
+
+[![asciicast](https://asciinema.org/a/ZhFbysMhMBOVJU2W5p9GfsVHe.svg)](https://asciinema.org/a/ZhFbysMhMBOVJU2W5p9GfsVHe)
+
 Below is an example deployment of two grid traders, for Bitcoin and Ethereum.
 
 ```python
