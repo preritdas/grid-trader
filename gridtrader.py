@@ -20,10 +20,10 @@ class GridTrader:
     Independent class which relies only on the Alpaca API instantiated globally.
     Requires a symbol, trading range, number of grids, and account allocation/quantity.
     If a quantity is given and it is not divisible by the number of grids, the per-grid
-    order size will be rounded up.
+    order size will be rounded up to the nearest non-fractional order.
 
-    Optionally, you can pass in your own Alpaca API REST object. If you don't,
-    one will be created automatically using values from _keys.py. Do this if you'd
+    If you want to use an account different to the one specified in keys.ini,
+    you can pass in your own Alpaca API REST object. Do this if you'd 
     like to run multiple GridTraders simultaneously in different accounts.
 
     Grid safety is optional. `top_profit_stop` and `bottom_profit_stop` will default
@@ -52,7 +52,7 @@ class GridTrader:
 
         # Exception if invalid asset class is given
         self.asset_class = asset_class.lower()
-        if self.asset_class != 'stock' and self.asset_class != 'crypto':
+        if self.asset_class not in {'stock', 'crypto'}:
             raise Exception("Invalid asset class given.")
 
         # Instantiate Alpaca
@@ -75,6 +75,9 @@ class GridTrader:
         self.range_top = trading_range[1]
         self.grids_amount = grids_amount
 
+        # Store starting account balance
+        self.account_equity = float(self.alpaca.get_account().equity)
+
         # Account allocation - check for mutual exclusivity
         if account_allocation is not None and quantity is None:
             self.account_allocation = account_allocation
@@ -93,6 +96,7 @@ class GridTrader:
         for i in range(self.grids_amount):
             grid = self.range_bottom + (i * distance)
             self.grids.append(round(grid, 2))
+
         # Check that no two grids are the same
         if len(self.grids) != len(set(self.grids)):
             raise Exception(
@@ -104,6 +108,7 @@ class GridTrader:
             self.top_profit_stop = self.range_top + distance
         else:
             self.top_profit_stop = top_profit_stop
+
         # Grid safety - bottom
         if bottom_profit_stop is None:
             self.bottom_profit_stop = self.range_bottom - distance
@@ -131,7 +136,7 @@ class GridTrader:
             if direction == 'buy':
                 self.alpaca.submit_order(
                     symbol = self.symbol,
-                    notional = size * float(self.alpaca.get_account().equity) * self.position_size,
+                    notional = size * self.account_equity * self.position_size,
                     side = 'buy',
                     take_profit = {
                         "limit_price": str(self.top_profit_stop)
@@ -145,7 +150,7 @@ class GridTrader:
             elif direction == 'sell':
                 self.alpaca.submit_order(
                     symbol = self.symbol,
-                    notional = size * float(self.alpaca.get_account().equity) * self.position_size,
+                    notional = size * self.account_equity * self.position_size,
                     side = 'sell',
                     take_profit = {
                         "limit_price": str(self.bottom_profit_stop)
@@ -297,6 +302,7 @@ def create_default_bot(
             symbol = symbol,
             trading_range = trading_range,
             grids_amount = grids_amount,
+            alpaca = alpaca,
             quantity = quantity,
             asset_class = asset_class
         )
@@ -305,6 +311,7 @@ def create_default_bot(
             symbol = symbol,
             trading_range = trading_range,
             grids_amount = grids_amount,
+            alpaca = alpaca,
             account_allocation = allocation,
             asset_class = asset_class
         )
