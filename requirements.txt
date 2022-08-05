@@ -1,1 +1,2 @@
 alpaca-trade-api==2.3.0
+rich==12.5.1
