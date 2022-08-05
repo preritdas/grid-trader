@@ -1,4 +1,4 @@
 """
 Basic utilities, such as Rich console logging.
 """
-from rich import Console; console = Console()
+from rich.console import Console; console = Console()
