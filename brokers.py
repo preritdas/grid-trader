@@ -1,5 +1,6 @@
 """
-Instantiate and manage various brokers.
+Instantiate and manage various brokers. Creates standardized wrapper classes for each
+broker, which are then instantiated and called by the main Executor class.
 """
 # Non-local imports
 import alpaca_trade_api as alpaca_api
@@ -10,9 +11,10 @@ import keys
 
 # ---- Broker wrappers---- 
 
-class Alpaca:
+class _Alpaca:
     """
-    Wrap basic functions.
+    Wrap all used functions in standardized form, to be called by
+    the Executor class.
     """
     def __init__(self, api_key = None, secret_key = None, base_url = None):
         """
@@ -24,6 +26,13 @@ class Alpaca:
             api_key = keys.Alpaca.api_key
             secret_key = keys.Alpaca.api_secret
             base_url = keys.Alpaca.base_url
+
+        # If no keys were provided in keys.ini
+        if not any(locals.values()):
+            raise Exception(
+                "Attempted to instantiate an Alpaca object but "
+                "found no API keys in keys.ini."
+            )
 
         self.alpaca = alpaca_api.REST(api_key, secret_key, base_url)
 
@@ -76,6 +85,7 @@ class Alpaca:
                     "limit_price": f"{(stop_loss * 0.995):.2f}"
                 } if stop_loss else None
             )
+
         elif notional:
             self.alpaca.submit_order(
                 symbol = symbol,
@@ -123,6 +133,7 @@ class Alpaca:
                     "limit_price": f"{(stop_loss * 1.005):.2f}"
                 } if stop_loss else None
             )
+
         elif notional:
             self.alpaca.submit_order(
                 symbol = symbol,
@@ -139,14 +150,18 @@ class Alpaca:
 # ---- Executor ----
 
 broker_mappings: dict[str, object] = {
-    'alpaca': Alpaca
+    'alpaca': _Alpaca
 }
 
 class Executor:
     """
-    Standardized operations in accounts with various brokers.
+    Standardized operations in accounts with various brokers. 
     """
     def __init__(self, broker: str):
+        """
+        If the broker provided is not supported, Exception is raised, 
+        printing the names of all supported brokers.
+        """
         if not broker.lower() in broker_mappings:
             raise Exception(
                 "Invalid broker provided. Supported brokers are "
