@@ -26,16 +26,32 @@ class Alpaca:
             base_url = keys.Alpaca.base_url
 
         self.alpaca = alpaca_api.REST(api_key, secret_key, base_url)
+
+
+    def account_equity(self) -> float:
+        """
+        Get the account's total equity/market value.
+        """
+        return float(self.alpaca.get_account().equity)
     
+
     def current_price(self, symbol: str) -> float:
         if len(symbol) == 6:  # if crypto asset
-            return float(self.alpaca.get_latest_crypto_trade().p)
+            return float(self.alpaca.get_latest_crypto_trade(symbol, 'CBSE').p)
 
         return float(self.alpaca.get_latest_trade(symbol))
 
-    def buy(self, symbol: str, quantity: float = None, notional: float = None):
+
+    def buy(
+        self, 
+        symbol: str, 
+        quantity: float = None, 
+        notional: float = None,
+        take_profit: float = None,
+        stop_loss: float = None
+    ):
         """
-        Buy symbol in either quantity or notional value.
+        Place a buy order.
 
         quantity and notional are mutually exclusive, but at least one of them 
         must be specified.
@@ -53,18 +69,36 @@ class Alpaca:
             self.alpaca.submit_order(
                 symbol = symbol,
                 qty = quantity,
-                side = 'buy'
+                side = 'buy',
+                take_profit = {"limit_price": str(take_profit)} if take_profit else None,
+                stop_loss = {
+                    "stop_price": str(stop_loss), 
+                    "limit_price": f"{(stop_loss * 0.995):.2f}"
+                } if stop_loss else None
             )
         elif notional:
             self.alpaca.submit_order(
                 symbol = symbol,
                 notional = notional,
-                side = 'buy'
+                side = 'buy',
+                take_profit = {"limit_price": str(take_profit)} if take_profit else None,
+                stop_loss = {
+                    "stop_price": str(stop_loss), 
+                    "limit_price": f"{(stop_loss * 0.995):.2f}"
+                } if stop_loss else None
             )
 
-    def sell(self, symbol: str, quantity: float = None, notional: float = None):
+
+    def sell(
+        self, 
+        symbol: str, 
+        quantity: float = None, 
+        notional: float = None,
+        take_profit: float = None,
+        stop_loss: float = None
+    ):
         """
-        Buy symbol in either quantity or notional value.
+        Place a sell order.
 
         quantity and notional are mutually exclusive, but at least one of them 
         must be specified.
@@ -79,9 +113,27 @@ class Alpaca:
             )
 
         if quantity:
-            self.alpaca.submit_order(symbol = symbol, qty = quantity, side = 'sell')
+            self.alpaca.submit_order(
+                symbol = symbol, 
+                qty = quantity, 
+                side = 'sell',
+                take_profit = {"limit_price": str(take_profit)} if take_profit else None,
+                stop_loss = {
+                    "stop_price": str(stop_loss), 
+                    "limit_price": f"{(stop_loss * 1.005):.2f}"
+                } if stop_loss else None
+            )
         elif notional:
-            self.alpaca.submit_order(symbol = symbol, notional = notional, side = 'sell')
+            self.alpaca.submit_order(
+                symbol = symbol,
+                notional = notional,
+                side = 'sell',
+                take_profit = {"limit_price": str(take_profit)} if take_profit else None,
+                stop_loss = {
+                    "stop_price": str(stop_loss), 
+                    "limit_price": f"{(stop_loss * 1.005):.2f}"
+                } if stop_loss else None
+            )
 
 
 # ---- Executor ----
@@ -105,26 +157,67 @@ class Executor:
         self.broker = broker_mappings[broker.lower()]()
         self.broker_name = broker.lower()
 
+
+    def account_equity(self) -> float:
+        """
+        Get the account's total equity/market value.
+        """
+        return self.broker.account_equity()
+
+
     def current_price(self, symbol: str) -> float:
         """
         Return the current price of a symbol.
         """
         return self.broker.current_price(symbol)
 
-    def buy(self, symbol: str, quantity: float = None, notional: float = None):
+
+    def buy(
+        self, 
+        symbol: str, 
+        quantity: float = None, 
+        notional: float = None,
+        take_profit: float = None,
+        stop_loss: float = None
+    ):
         """
         Place a buy order.
-        """
-        return self.broker.buy(symbol, quantity, notional)
 
-    def sell(self, symbol: str, quantity: float = None, notional: float = None):
+        quantity and notional are mutually exclusive, but at least one of them 
+        must be specified.
+        """
+        return self.broker.buy(symbol, quantity, notional, take_profit, stop_loss)
+
+
+    def sell(
+        self, 
+        symbol: str, 
+        quantity: float = None, 
+        notional: float = None,
+        take_profit: float = None,
+        stop_loss: float = None
+    ):
         """
         Place a sell order.
+
+        quantity and notional are mutually exclusive, but at least one of them 
+        must be specified.
         """
-        return self.broker.sell(symbol, quantity, notional)
+        return self.broker.sell(symbol, quantity, notional, take_profit, stop_loss)
 
 
 # ---- Default executor ----
 
 if keys.default_broker: executor = Executor(keys.default_broker)
-else: executor = Executor('alpaca')
+else: executor = None
+
+def create_executor(broker: str = None):
+    if broker is None and executor is None:
+        raise Exception(
+            "No broker was provided, and based on the configuration of keys.ini, "
+            "no default broker was detected."
+        )
+
+    if broker is not None: return executor(broker)
+    if broker is None and executor: return executor
+        
