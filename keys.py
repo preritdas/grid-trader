@@ -22,6 +22,21 @@ keys = configparser.ConfigParser()
 keys.read('keys.ini')
 
 
+# ---- Default broker check ----
+
+full = 0
+default: str = None
+for key in keys:
+    if any(keys[key].values()):
+        full += 1
+        default = key
+    
+if full == 1:
+    default_broker = default
+else:
+    default_broker = None
+
+
 class Alpaca:
     """
     Trading API.
