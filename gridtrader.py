@@ -2,17 +2,14 @@
 Defines the main GridTrader class along with a `create_default_bot` function
 to instantiate GridTrader with primarily default values.
 """
-# Non-local imports
-import alpaca_trade_api as alpaca_api
-
 # Local imports
 import math
 import multiprocessing as mp
 import time  # sleep between trade logic
 
 # Project modules
-import keys
 import utils
+import brokers
 
 
 class GridTrader:
@@ -36,12 +33,11 @@ class GridTrader:
         symbol: str, 
         trading_range: tuple,
         grids_amount: int, 
-        alpaca: alpaca_api.REST = None,
+        broker: str = None,
         account_allocation: float = None,
         quantity: int = None, 
         top_profit_stop: float = None,
         bottom_profit_stop: float = None,
-        asset_class: str = 'stock'
     ):
         # Exception if trading_range items aren't numbers
         if any(
@@ -51,32 +47,29 @@ class GridTrader:
             raise Exception("Items in the trading_range tuple must be numbers.")
 
         # Exception if invalid asset class is given
-        self.asset_class = asset_class.lower()
         if self.asset_class not in {'stock', 'crypto'}:
             raise Exception("Invalid asset class given.")
 
-        # Instantiate Alpaca
-        if alpaca is None:
-            self.alpaca = alpaca_api.REST(
-                key_id = keys.Alpaca.api_key,
-                secret_key = keys.Alpaca.api_secret,
-                base_url = keys.Alpaca.base_url
-            )
-        elif isinstance(alpaca, alpaca_api.REST):
-            self.alpaca = alpaca
-        else:
+        # Instantiate broker
+        if broker is None and brokers.executor:
+            self.executor = brokers.executor
+        elif broker is None and not brokers.executor:
             raise Exception(
-                "You must either insert an Alpaca API Rest object "
-                "or nothing at all."
+                "You didn't provide a broker and a default broker couldn't "
+                "be ascertained based on your keys.ini configuration."
             )
 
+        # Create broker executor
+        self.executor = brokers.create_executor(broker)
+
+        # Trading range
         self.symbol = symbol.upper()
         self.range_bottom = trading_range[0]
         self.range_top = trading_range[1]
         self.grids_amount = grids_amount
 
         # Store starting account balance
-        self.account_equity = float(self.alpaca.get_account().equity)
+        self.account_equity = self.executor.account_equity()
 
         # Account allocation - check for mutual exclusivity
         if account_allocation is not None and quantity is None:
@@ -119,14 +112,6 @@ class GridTrader:
         self.grids_below = None
     
 
-    def current_price(self):
-        """Returns the current price of self.symbol, calculated by the latest trade."""
-        if self.asset_class == 'crypto':
-            return float(self.alpaca.get_latest_crypto_trade(self.symbol, 'CBSE').p)
-        else:
-            return float(self.alpaca.get_latest_trade(self.symbol).p)
-
-
     def place_order(self, direction: str, size: int):
         """
         Places an order to buy or sell. `direction` must be given as 'buy' or 'sell'.
@@ -134,66 +119,39 @@ class GridTrader:
         direction = direction.lower()
         if self.account_allocation:  # if notional values
             if direction == 'buy':
-                self.alpaca.submit_order(
+                self.executor.buy(
                     symbol = self.symbol,
                     notional = size * self.account_equity * self.position_size,
-                    side = 'buy',
-                    take_profit = {
-                        "limit_price": str(self.top_profit_stop)
-                    },
-                    stop_loss = {
-                        "stop_price": str(self.bottom_profit_stop),
-                        # Limit price 0.5% lower
-                        "limit_price": str(round(self.bottom_profit_stop * 0.995, 2))
-                    }
+                    take_profit = self.top_profit_stop,
+                    stop_loss = self.bottom_profit_stop,
                 )
             elif direction == 'sell':
-                self.alpaca.submit_order(
+                self.executor.sell(
                     symbol = self.symbol,
                     notional = size * self.account_equity * self.position_size,
-                    side = 'sell',
-                    take_profit = {
-                        "limit_price": str(self.bottom_profit_stop)
-                    },
-                    stop_loss = {
-                        "stop_price": str(self.top_profit_stop),
-                        # Limit price 0.5% higher
-                        "limit_price": str(round(self.top_profit_stop * 1.005, 2))
-                    }
+                    take_profit = self.bottom_profit_stop,
+                    stop_loss = self.top_profit_stop
                 )
             else:
                 raise Exception(f"Invalid direction: {direction}.")
             
             # Notional value print message.
             utils.console.log(f"{self.symbol} Order placed. {direction = }, {size = }.")
+
         elif self.quantity:  # integer contracts
             if direction == 'buy':
-                self.alpaca.submit_order(
+                self.executor.buy(
                     symbol = self.symbol,
                     qty = self.quantity,
-                    side = 'buy',
-                    take_profit = {
-                        "limit_price": str(self.top_profit_stop)
-                    },
-                    stop_loss = {
-                        "stop_price": str(self.bottom_profit_stop),
-                        # Limit price 0.5% lower
-                        "limit_price": str(round(self.bottom_profit_stop * 0.995, 2))
-                    }
+                    take_profit = self.top_profit_stop,
+                    stop_loss = self.bottom_profit_stop
                 )
             elif direction == 'sell':
-                self.alpaca.submit_order(
+                self.executor.sell(
                     symbol = self.symbol,
                     qty = self.quantity,
-                    side = 'sell',
-                    take_profit = {
-                        "limit_price": str(self.bottom_profit_stop)
-                    },
-                    stop_loss = {
-                        "stop_price": str(self.top_profit_stop),
-                        # Limit price 0.5% higher
-                        "limit_price": str(round(self.top_profit_stop * 1.005, 2)) 
-                    }
+                    take_profit = self.bottom_profit_stop,
+                    stop_loss = self.top_profit_stop
                 )
             else:
                 raise Exception(f"Invalid direction: {direction}.")
@@ -214,7 +172,7 @@ class GridTrader:
         Returns True if the logic resulted in a buy.
         Returns False if the logic resulted in a short. 
         """
-        current_price = self.current_price()
+        current_price = self.executor.current_price(self.symbol)
 
         # Do nothing if price isn't in the grids
         if current_price < self.range_bottom or current_price > self.range_top:
@@ -256,7 +214,7 @@ class GridTrader:
 def create_default_bot(
     symbol: str, 
     grid_height: float,
-    alpaca: alpaca_api.REST = None,
+    broker: str = None,
     grids_amount: int = 21,
     quantity: int = None, 
     allocation: float = None
@@ -265,32 +223,15 @@ def create_default_bot(
     Returns a GridTrader object with a grid formed symmetrically
     around the current price.
     """
-    # Instantiate Alpaca
-    if alpaca is None:
-        alpaca = alpaca_api.REST(
-            key_id = keys.Alpaca.api_key,
-            secret_key = keys.Alpaca.api_secret,
-            base_url = keys.Alpaca.base_url
-        )
-    elif not isinstance(alpaca, alpaca_api.REST):
-        raise Exception(
-            "You must either insert an Alpaca API Rest object "
-            "or nothing at all."
-        )
+    # Instantiate executor for broker
+    executor = brokers.create_executor(broker)
 
     # Default arguments
     assert not (quantity is not None and allocation is not None)
     assert not (quantity is None and allocation is None)
     
-    # Asset class (shortcut) and get current price
-    if len(symbol) == 6:  # BTCUSD, ETHUSD etc.
-        asset_class = 'crypto'
-        current_price = float(alpaca.get_latest_crypto_trade(symbol, 'CBSE').p)
-    else:
-        asset_class = 'stock'
-        current_price = float(alpaca.get_latest_trade(symbol).p)
-
-    # Define parameters
+    # Parameters - current price and symbol name
+    current_price = executor.current_price(symbol)
     symbol = symbol.upper()
 
     # Current price
@@ -302,18 +243,17 @@ def create_default_bot(
             symbol = symbol,
             trading_range = trading_range,
             grids_amount = grids_amount,
-            alpaca = alpaca,
-            quantity = quantity,
-            asset_class = asset_class
+            broker = broker,
+            quantity = quantity
         )
+
     elif allocation:
         bot = GridTrader(
             symbol = symbol,
             trading_range = trading_range,
             grids_amount = grids_amount,
-            alpaca = alpaca,
-            account_allocation = allocation,
-            asset_class = asset_class
+            broker = broker,
+            account_allocation = allocation
         )
 
     return bot
