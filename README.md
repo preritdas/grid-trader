@@ -147,7 +147,7 @@ User script. Create all desired GridTrader, and optionally, instantiate any Alpa
 
 ### keys.ini
 
-Contains Alpaca login credentials. The following items must be provided:
+Contains broker credentials. Note that you're only required to provide keys for a minimum of one broker. Read the section on [multiple brokers](#multiple-brokers) to understand why you would provide keys for more than one broker.
 
 ```ini
 [Alpaca]
@@ -159,8 +159,6 @@ base_url = BASE_URL_ENDPOINT
 api_key = KEY
 api_secret = SECRET
 ```
-
-Note that you're only required to provide keys for a minimum of one broker. Read the section on [multiple brokers](#multiple-brokers) to understand why you would provide keys for more than one broker.
 
 A sample [keys.ini](keys%20(sample).ini) file is provided in the repository. After cloning, you can either rename this file to "keys.ini" or use the provided script (on Mac/Linux).
 
