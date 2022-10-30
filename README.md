@@ -110,11 +110,11 @@ Below are all the parameters for Grid Trader along with their necessities and be
 
 ### Default Bot Creation
 
-Because the `GridTrader` classes requires so many inputs, some of which are mutually exclusive, the global `create_default_bot()` function can be useful. It takes only a few parameters, infers/calculates the others, and returns a `GridTrader` object ready for deployment. 
+Because the `GridTrader` classes requires so many inputs, some of which are mutually exclusive, the `GridTrader.from_defaults` constructor class method can be useful. It takes only a few parameters, infers/calculates the others, and returns a `GridTrader` object ready for deployment. 
 
 The main benefit of this function, however, is that it automatically outputs a bot whose range is perfectly centered around the symbol's current price.
 
-Arguments for `create_default_bot()`:
+Arguments for `GridTrader.from_defaults`:
 
 | Parameter | Necessity | Behavior |
 | --- | --- | --- |
@@ -125,12 +125,12 @@ Arguments for `create_default_bot()`:
 | `broker` | Optional | String - The name of the broker you wish the GridTrader to use. See [multiple brokers](#multiple-brokers) for more on this, and why it's optional. |
 | `quantity` | Mutually exclusive with `account_allocation` | Int - the number of shares to be allocated to the strategy. Note that this will _still_ result in orders being divided by grid. |
 
-Creating and deploying a bot using the `create_default_bot()` function:
+Creating and deploying a bot using the `GridTrader.from_defaults` function:
 
 ```python
 def main():
     # Deploy Ethereum with default bot function
-    eth_trader = create_default_bot(
+    eth_trader = GridTrader.from_defaults(
         symbol = 'ETHUSD',
         grid_height = 75,
         grids_amount = 15,

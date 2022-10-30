@@ -21,7 +21,7 @@ def main():
         account_allocation = 0.1
     )
 
-    easy_deploy = gridtrader.create_default_bot(
+    easy_deploy = gridtrader.GridTrader.from_defaults(
         symbol = 'BTCUSD',
         grid_height = 15,
         grids_amount = 16,

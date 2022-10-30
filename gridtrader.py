@@ -110,7 +110,52 @@ class GridTrader:
 
         # Define self.grids_below to allow first trade_logic iteration 
         self.grids_below = None
-    
+
+    @classmethod
+    def from_defaults(
+        cls,
+        symbol: str, 
+        grid_height: float,
+        broker: str = None,
+        grids_amount: int = 21,
+        quantity: int = None, 
+        allocation: float = None
+    ) -> "GridTrader":
+        """
+        Returns a GridTrader object with a grid formed symmetrically
+        around the current price.
+        """
+        # Instantiate executor for broker
+        executor = brokers.create_executor(broker)
+
+        # Default arguments
+        assert not (quantity is not None and allocation is not None)
+        assert not (quantity is None and allocation is None)
+        
+        # Parameters - current price and symbol name
+        current_price = executor.current_price(symbol)
+        symbol = symbol.upper()
+
+        # Current price
+        trading_range = ((current_price - grid_height), (current_price + grid_height))
+
+        # Create the bot
+        if quantity:
+            return cls(
+                symbol = symbol,
+                trading_range = trading_range,
+                grids_amount = grids_amount,
+                broker = broker,
+                quantity = quantity
+            )
+        elif allocation:
+            return cls(
+                symbol = symbol,
+                trading_range = trading_range,
+                grids_amount = grids_amount,
+                broker = broker,
+                account_allocation = allocation
+            )
 
     def place_order(self, direction: str, size: int):
         """
@@ -207,53 +252,3 @@ class GridTrader:
         while True: 
             self.trade_logic()
             time.sleep(0.5)
-
-
-# ---- Deployment ----
-
-def create_default_bot(
-    symbol: str, 
-    grid_height: float,
-    broker: str = None,
-    grids_amount: int = 21,
-    quantity: int = None, 
-    allocation: float = None
-):
-    """
-    Returns a GridTrader object with a grid formed symmetrically
-    around the current price.
-    """
-    # Instantiate executor for broker
-    executor = brokers.create_executor(broker)
-
-    # Default arguments
-    assert not (quantity is not None and allocation is not None)
-    assert not (quantity is None and allocation is None)
-    
-    # Parameters - current price and symbol name
-    current_price = executor.current_price(symbol)
-    symbol = symbol.upper()
-
-    # Current price
-    trading_range = ((current_price - grid_height), (current_price + grid_height))
-
-    # Create the bot
-    if quantity:
-        bot = GridTrader(
-            symbol = symbol,
-            trading_range = trading_range,
-            grids_amount = grids_amount,
-            broker = broker,
-            quantity = quantity
-        )
-
-    elif allocation:
-        bot = GridTrader(
-            symbol = symbol,
-            trading_range = trading_range,
-            grids_amount = grids_amount,
-            broker = broker,
-            account_allocation = allocation
-        )
-
-    return bot
